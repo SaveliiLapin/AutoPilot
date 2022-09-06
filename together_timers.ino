@@ -6,7 +6,7 @@
 
 uint32_t INPUT_FREQ = 0;
 uint32_t PRESCALE = 100;
-uint32_t FALLING_CHANNEL;
+uint32_t FALLING_CHANNEL = 1;
 uint32_t DUTY = 0;
 uint32_t MIN_DUTY = 50;
 uint32_t MAX_DUTY = 100;
@@ -68,22 +68,6 @@ void setup()
 {
   Serial.begin(115200);
 
-  switch (RISING_CHANNEL)
-  {
-    case 1:
-      FALLING_CHANNEL = 2;
-      break;
-    case 2:
-      FALLING_CHANNEL = 1;
-      break;
-    case 3:
-      FALLING_CHANNEL = 4;
-      break;
-    case 4:
-      FALLING_CHANNEL = 3;
-      break;
-  }
-
   RADIO_TIMER->setMode(RISING_CHANNEL, TIMER_INPUT_FREQ_DUTY_MEASUREMENT, RADIO_PIN);
   RADIO_TIMER->setPrescaleFactor(PRESCALE);
   RADIO_TIMER->setOverflow(0x10000);
@@ -94,5 +78,5 @@ void setup()
 
 void loop()
 {
- 
+  
 }
