@@ -5,34 +5,36 @@
 #define MOTOR_4_PIN PB7
 
 uint32_t INPUT_FREQ = 0;
-uint32_t PRESCALE = 10;
+uint32_t PRESCALE = 100;
 uint32_t FALLING_CHANNEL;
+uint32_t DUTY = 0;
+uint32_t MIN_DUTY = 50;
+uint32_t MAX_DUTY = 100;
+uint32_t FREQUENCY = 500;
 volatile uint32_t PREVIOUS_CAPTURE = 0;
 volatile uint32_t CURRENT_CAPTURE;
 volatile uint32_t MEASURED_HIGH;
-int duty = 0;
-int frequency = 48000;
 
 TIM_TypeDef *RADIO_INSTANCE = (TIM_TypeDef *)pinmap_peripheral(digitalPinToPinName(RADIO_PIN), PinMap_PWM);
 uint32_t RISING_CHANNEL = STM_PIN_CHANNEL(pinmap_function(digitalPinToPinName(RADIO_PIN), PinMap_PWM));
 
-TIM_TypeDef *INSTANCE_1 = (TIM_TypeDef *)pinmap_peripheral(digitalPinToPinName(MOTOR_1_PIN), PinMap_PWM);
+TIM_TypeDef *MOTOR_INSTANCE_1 = (TIM_TypeDef *)pinmap_peripheral(digitalPinToPinName(MOTOR_1_PIN), PinMap_PWM);
 uint32_t CHANNEL_1 = STM_PIN_CHANNEL(pinmap_function(digitalPinToPinName(MOTOR_1_PIN), PinMap_PWM));
 
-TIM_TypeDef *INSTANCE_2 = (TIM_TypeDef *)pinmap_peripheral(digitalPinToPinName(MOTOR_2_PIN), PinMap_PWM);
+TIM_TypeDef *MOTOR_INSTANCE_2 = (TIM_TypeDef *)pinmap_peripheral(digitalPinToPinName(MOTOR_2_PIN), PinMap_PWM);
 uint32_t CHANNEL_2 = STM_PIN_CHANNEL(pinmap_function(digitalPinToPinName(MOTOR_2_PIN), PinMap_PWM));
 
-TIM_TypeDef *INSTANCE_3 = (TIM_TypeDef *)pinmap_peripheral(digitalPinToPinName(MOTOR_3_PIN), PinMap_PWM);
+TIM_TypeDef *MOTOR_INSTANCE_3 = (TIM_TypeDef *)pinmap_peripheral(digitalPinToPinName(MOTOR_3_PIN), PinMap_PWM);
 uint32_t CHANNEL_3 = STM_PIN_CHANNEL(pinmap_function(digitalPinToPinName(MOTOR_3_PIN), PinMap_PWM));
 
-TIM_TypeDef *INSTANCE_4 = (TIM_TypeDef *)pinmap_peripheral(digitalPinToPinName(MOTOR_4_PIN), PinMap_PWM);
+TIM_TypeDef *MOTOR_INSTANCE_4 = (TIM_TypeDef *)pinmap_peripheral(digitalPinToPinName(MOTOR_4_PIN), PinMap_PWM);
 uint32_t CHANNEL_4 = STM_PIN_CHANNEL(pinmap_function(digitalPinToPinName(MOTOR_4_PIN), PinMap_PWM));
 
 HardwareTimer *RADIO_TIMER = new HardwareTimer(RADIO_INSTANCE);
-HardwareTimer *motor_1 = new HardwareTimer(INSTANCE_1);
-HardwareTimer *motor_2 = new HardwareTimer(INSTANCE_2);
-HardwareTimer *motor_3 = new HardwareTimer(INSTANCE_3);
-HardwareTimer *motor_4 = new HardwareTimer(INSTANCE_4);
+HardwareTimer *MOTOR_1_TIMER = new HardwareTimer(MOTOR_INSTANCE_1);
+HardwareTimer *MOTOR_2_TIMER = new HardwareTimer(MOTOR_INSTANCE_2);
+HardwareTimer *MOTOR_3_TIMER = new HardwareTimer(MOTOR_INSTANCE_3);
+HardwareTimer *MOTOR_4_TIMER = new HardwareTimer(MOTOR_INSTANCE_4);
 
 void CAPTURE_RISING_FUNC(void)
 {
@@ -52,13 +54,22 @@ void CAPTURE_FALLING_FUNC(void)
   {
     MEASURED_HIGH = 0x10000 + CURRENT_CAPTURE - PREVIOUS_CAPTURE;
   }
+
+  DUTY = map(MEASURED_HIGH, 1056, 1830, MIN_DUTY, MAX_DUTY);
+  Serial.println((String)MEASURED_HIGH + "  " + DUTY);
+  
+  MOTOR_1_TIMER->setPWM(CHANNEL_1, MOTOR_1_PIN, FREQUENCY, DUTY);
+  MOTOR_2_TIMER->setPWM(CHANNEL_2, MOTOR_2_PIN, FREQUENCY, DUTY);
+  MOTOR_3_TIMER->setPWM(CHANNEL_3, MOTOR_3_PIN, FREQUENCY, DUTY);
+  MOTOR_4_TIMER->setPWM(CHANNEL_4, MOTOR_4_PIN, FREQUENCY, DUTY);
 }
 
 void setup()
 {
   Serial.begin(115200);
 
-  switch (RISING_CHANNEL) {
+  switch (RISING_CHANNEL)
+  {
     case 1:
       FALLING_CHANNEL = 2;
       break;
@@ -83,16 +94,5 @@ void setup()
 
 void loop()
 {
-  Serial.print(MEASURED_HIGH);
-  Serial.print("   ");
-  delay(100);
-
-  duty = map(MEASURED_HIGH, 10660, 18270, 16, 100);
-
-  Serial.println(duty);
-  
-  motor_1->setPWM(CHANNEL_1, MOTOR_1_PIN, frequency, duty);
-  motor_2->setPWM(CHANNEL_2, MOTOR_2_PIN, frequency, duty);
-  motor_3->setPWM(CHANNEL_3, MOTOR_3_PIN, frequency, duty);
-  motor_4->setPWM(CHANNEL_4, MOTOR_4_PIN, frequency, duty);
+ 
 }
