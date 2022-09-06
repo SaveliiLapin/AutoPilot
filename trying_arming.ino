@@ -3,7 +3,9 @@
 #define MOTOR_2_PIN PB5
 #define MOTOR_3_PIN PB6
 #define MOTOR_4_PIN PB7
-#define AUX1_PIN PB2
+#define AUX1_PIN PA8
+
+uint32_t IS_ARMED = 0;
 
 uint32_t DUTY = 0;
 uint32_t MIN_DUTY = 50;
@@ -16,10 +18,10 @@ volatile uint32_t PREVIOUS_CAPTURE = 0;
 volatile uint32_t CURRENT_CAPTURE;
 volatile uint32_t MEASURED_HIGH;
 
-uint32_t FALLING_AUX1 = 1;
+uint32_t FALLING_AUX1 = 2;
 volatile uint32_t PREVIOUS_AUX1 = 0;
 volatile uint32_t CURRENT_AUX1;
-volatile uint32_t MEASURED_AUX1;
+volatile uint32_t MEASURED_AUX1 = 0;
 
 TIM_TypeDef *RADIO_INSTANCE = (TIM_TypeDef *)pinmap_peripheral(digitalPinToPinName(RADIO_PIN), PinMap_PWM);
 uint32_t RISING_CHANNEL = STM_PIN_CHANNEL(pinmap_function(digitalPinToPinName(RADIO_PIN), PinMap_PWM));
@@ -66,8 +68,7 @@ void CAPTURE_FALLING_FUNC(void)
   }
 
   DUTY = map(MEASURED_HIGH, 1056, 1830, MIN_DUTY, MAX_DUTY);
-  Serial.println((String)MEASURED_HIGH + "  " + DUTY);
-  
+
   MOTOR_1_TIMER->setPWM(CHANNEL_1, MOTOR_1_PIN, FREQUENCY, DUTY);
   MOTOR_2_TIMER->setPWM(CHANNEL_2, MOTOR_2_PIN, FREQUENCY, DUTY);
   MOTOR_3_TIMER->setPWM(CHANNEL_3, MOTOR_3_PIN, FREQUENCY, DUTY);
@@ -92,8 +93,6 @@ void AUX1_FALLING_FUNC(void)
   {
     MEASURED_AUX1 = 0x10000 + CURRENT_AUX1 - PREVIOUS_AUX1;
   }
-
-  Serial.println(MEASURED_AUX1);
 }
 
 void setup()
@@ -116,6 +115,7 @@ void setup()
 }
 
 void loop()
-{
-  
+{  
+  Serial.println((String)MEASURED_HIGH + "  " + DUTY + "  " + MEASURED_AUX1);
+  delay(200);
 }
