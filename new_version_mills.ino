@@ -1,32 +1,81 @@
-#define motor1 PA8
-#define motor2 PA9
-#define motor3 PA10
-#define motor4 PA11
+/* MOTOR INITIALIZATION */
+
+#define motor1 PB6
+#define motor2 PB7
+#define motor3 PB8
+#define motor4 PB9
 
 #define channel1 1
 #define channel2 2
 #define channel3 3
 #define channel4 4
 
-uint8_t frequency = 50;                  // Herz
-uint8_t minThrottle = 1000;             // microseconds
-uint8_t maxThrottle = 2000;             // microseconds
-uint8_t currentThrottle = minThrottle; // microseconds
+int frequency = 50;                  // Herz
+int minThrottle = 1000;             // microseconds
+int maxThrottle = 2000;             // microseconds
+int currentThrottle = minThrottle; // microseconds
 
-void Update_IT_callback(void)
+HardwareTimer *motorTimer = new HardwareTimer(TIM4);
+
+/* END MOTOR INITIALIZATION */
+
+/* RADIO INITIALIZATION */
+
+#define radio PB5
+#define radioChannel 2
+
+volatile int measured;
+volatile int current = 0;
+volatile int previous = 0;
+int prescale = 100;
+
+HardwareTimer *radioTimer = new HardwareTimer(TIM3);
+
+void inputCapture(void)
 {
-  digitalWrite(motor1, LOW);
+  current = radioTimer->getCaptureCompare(radioChannel);
+
+  if (previous == 0)
+  {
+    previous = current;
+  }
+  else
+  {
+    if (current > previous)
+    {
+      measured = current - previous;
+    }
+    else
+    {
+      measured = 0x10000 + current - previous;
+    }
+
+    previous = 0;
+
+    currentThrottle = map(measured, 1063, 1827, 1000, 2000);
+
+    if (currentThrottle < 1000)
+    {
+      currentThrottle = 1000;
+    }
+    else if (currentThrottle > 2000)
+    {
+      currentThrottle = 2000;
+    }
+    
+    motorTimer->setCaptureCompare(channel1, currentThrottle, MICROSEC_COMPARE_FORMAT);
+    motorTimer->setCaptureCompare(channel2, currentThrottle, MICROSEC_COMPARE_FORMAT);
+    motorTimer->setCaptureCompare(channel3, currentThrottle, MICROSEC_COMPARE_FORMAT);
+    motorTimer->setCaptureCompare(channel4, currentThrottle, MICROSEC_COMPARE_FORMAT);
+  }
 }
 
-void Compare_IT_callback(void)
-{ 
-  digitalWrite(motor1, HIGH);
-}
-
-HardwareTimer *motorTimer = new HardwareTimer(TIM1);
+/* END RADIO INITIALIZATION */
 
 void setup()
 {
+  /* MOTOR SETUP */
+  
   Serial.begin(9600);
   
   pinMode(motor1, OUTPUT);
@@ -45,22 +94,25 @@ void setup()
   motorTimer->setCaptureCompare(channel2, currentThrottle, MICROSEC_COMPARE_FORMAT);
   motorTimer->setCaptureCompare(channel3, currentThrottle, MICROSEC_COMPARE_FORMAT);
   motorTimer->setCaptureCompare(channel4, currentThrottle, MICROSEC_COMPARE_FORMAT);
-  
-  motorTimer->attachInterrupt(Update_IT_callback);
-  motorTimer->attachInterrupt(channel1, Compare_IT_callback);
   motorTimer->resume();
-}
 
+
+  /* END MOTOR SETUP */
+
+  /* RADIO SETUP */
+  
+  pinMode(radio, INPUT);
+
+  radioTimer->setMode(radioChannel, TIMER_INPUT_CAPTURE_BOTHEDGE, radio);
+  radioTimer->setPrescaleFactor(prescale);
+  radioTimer->setOverflow(0x10000);
+  radioTimer->attachInterrupt(radioChannel, inputCapture);
+  radioTimer->resume();
+
+  /* END RADIO SETUP */
+}
 
 void loop()
 {
-  if (Serial.available() > 0)
-  {
-    currentThrottle = Serial.parseInt();
-
-    motorTimer->setCaptureCompare(channel1, currentThrottle, MICROSEC_COMPARE_FORMAT);
-    motorTimer->setCaptureCompare(channel2, currentThrottle, MICROSEC_COMPARE_FORMAT);
-    motorTimer->setCaptureCompare(channel3, currentThrottle, MICROSEC_COMPARE_FORMAT);
-    motorTimer->setCaptureCompare(channel4, currentThrottle, MICROSEC_COMPARE_FORMAT);
-  }
+   Serial.println((String)"Measured is " + measured + "  Throttle is " + currentThrottle);
 }
